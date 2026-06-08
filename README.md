@@ -1,0 +1,2 @@
+# Real-Time-Multi-Target-Tracking-Using-YDLIDAR-G2-and-Unscented-Kalman-Filter-with-CTRV-Motion-Model
+This **MATLAB** project performs real-time multi-target tracking using a **YDLIDAR G2**. By combining a **CTRV** motion model with an **Unscented Kalman Filter (UKF)**, it robustly tracks moving objects. This approach ensures high-accuracy state estimation, offering an efficient, reliable solution for autonomous robotics and navigation tasks.
