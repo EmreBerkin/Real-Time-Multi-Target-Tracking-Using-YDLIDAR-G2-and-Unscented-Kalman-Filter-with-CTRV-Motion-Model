@@ -532,6 +532,3 @@ If you use this code in your research, please cite:
 
 ---
 
-<p align="center">
-  Made with ❤️ at Marmara University · Istanbul, Turkey
-</p>
