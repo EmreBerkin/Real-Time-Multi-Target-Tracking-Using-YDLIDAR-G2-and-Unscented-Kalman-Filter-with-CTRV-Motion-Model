@@ -1,0 +1,236 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+
+\begin{document}
+
+\title{KALMAN FILTERING PROJECT REPORT\\Real-Time Multi-Target Tracking Using YDLIDAR G2 and Unscented Kalman Filter with CTRV Motion Model}
+
+\author{
+\IEEEauthorblockN{Kadir YOKU\c{S}}
+\IEEEauthorblockA{\textit{Marmara University} \\
+kadiryokus@marun.edu.tr}
+\and
+\IEEEauthorblockN{Emre Berkin \c{C}ET\.{I}N}
+\IEEEauthorblockA{\textit{Marmara University} \\
+cetinemreberkin@gmail.com}
+\and
+\IEEEauthorblockN{Osman Eren K\"{O}SE}
+\IEEEauthorblockA{\textit{Marmara University} \\
+osman.eren@marun.edu.tr}
+}
+
+\maketitle
+
+\begin{abstract}
+This study presents a real-time multi-target tracking system based on YDLIDAR G2 sensor measurements and an Unscented Kalman Filter (UKF) framework using a Constant Turn Rate and Velocity (CTRV) motion model. The proposed system performs target detection, clustering, data association, and state estimation in dynamic indoor environments. Raw LiDAR measurements are processed using a DBSCAN-based clustering algorithm to identify moving targets. The extracted measurements are then tracked using a UKF estimator with a nonlinear CTRV motion model. In addition, statistical consistency metrics including Normalized Innovation Squared (NIS) are evaluated to analyze filter stability and estimation performance. Experimental results demonstrate that the proposed approach achieves stable multi-target tracking performance with reduced false tracks and reliable motion estimation in real time.
+\end{abstract}
+
+\begin{IEEEkeywords}
+LiDAR, Unscented Kalman Filter, UKF, CTRV, Multi-Target Tracking, YDLIDAR G2, DBSCAN, State Estimation
+\end{IEEEkeywords}
+
+\section{Introduction}
+Autonomous systems and intelligent sensing applications require robust target detection and tracking algorithms in dynamic environments. LiDAR sensors are widely used in robotics, autonomous navigation, and surveillance systems because of their high spatial accuracy and real-time measurement capabilities.
+
+Kalman filtering methods are commonly used for state estimation problems. However, classical linear Kalman Filters are insufficient for nonlinear motion models and nonlinear measurement systems. Therefore, nonlinear filtering approaches such as the Extended Kalman Filter (EKF) and Unscented Kalman Filter (UKF) are preferred in practical tracking applications. Several previous studies have investigated LiDAR-based target tracking using nonlinear filtering techniques. For example, Sualeh and Kim [1] proposed a dynamic multi-LiDAR-based multiple object detection and tracking framework in which centroid measurements obtained from LiDAR object detection were tracked using an Interactive Multiple Model Unscented Kalman Filter combined with a Joint Probabilistic Data Association Filter (IMM-UKF-JPDAF). This study shows that UKF-based nonlinear state estimation can be effectively integrated with JPDA-based measurement-to-track association to improve the robustness of multi-target tracking in cluttered autonomous driving environments. EKF-based approaches provide relatively low computational complexity but may suffer from linearization errors under highly nonlinear motion conditions. Particle filter-based methods offer improved nonlinear estimation capability; however, they generally require higher computational resources for real-time operation. Recently, UKF-based tracking systems have attracted significant attention due to their ability to achieve more accurate nonlinear state estimation without explicit Jacobian calculations.
+
+In this project, a real-time multi-target tracking system was developed using the YDLIDAR G2 sensor and an Unscented Kalman Filter framework. The system employs a Constant Turn Rate and Velocity (CTRV) motion model to estimate the motion states of detected targets. LiDAR point clouds are processed using clustering methods to extract candidate objects, and a nearest-neighbor based data association strategy is applied for track assignment. The main contributions of this study are summarized as follows:
+\begin{itemize}
+    \item Real-time LiDAR-based multi-target tracking implementation,
+    \item UKF-based nonlinear state estimation using a CTRV motion model,
+    \item DBSCAN clustering for target extraction,
+    \item NIS based consistency analysis,
+    \item Reduction of false tracks using confirmation and missed-frame logic.
+\end{itemize}
+
+In recent years, LiDAR-based perception systems have become increasingly important in autonomous robotics and intelligent transportation applications. Reliable tracking of moving objects is essential for collision avoidance, environment understanding, and motion planning. Compared to camera-only systems, LiDAR sensors provide accurate depth measurements and are less sensitive to illumination changes. Therefore, combining LiDAR sensing with nonlinear filtering approaches such as UKF provides an effective solution for robust target tracking. Despite these advantages, reliable real-time multi-target tracking remains a challenging problem due to noisy LiDAR measurements, cluttered indoor environments, temporary target occlusions, and nonlinear target maneuvers. These challenges motivate the development of robust nonlinear estimation frameworks capable of maintaining stable tracking performance under dynamic operating conditions.
+
+\section{System Architecture}
+The proposed system consists of four main stages:
+\begin{enumerate}
+    \item LiDAR data acquisition,
+    \item Point cloud preprocessing and clustering,
+    \item Multi-target tracking using UKF,
+    \item Consistency analysis using NIS metric.
+\end{enumerate}
+
+The YDLIDAR G2 sensor provides polar coordinate measurements in the form of distance and angle values. These measurements are converted into Cartesian coordinates and filtered according to predefined range thresholds.
+
+DBSCAN clustering is applied to the filtered point cloud in order to identify potential moving targets. Each cluster is analyzed based on geometric properties such as width and height to eliminate noise and irrelevant structures.
+
+The extracted cluster centers are used as measurements for the Unscented Kalman Filter. A nearest-neighbor based gating mechanism assigns measurements to existing tracks. New tracks are initialized when unmatched measurements are detected.
+
+\subsection{DBSCAN Parameters}
+The clustering algorithm uses the following parameters:
+\begin{itemize}
+    \item $\epsilon = 0.25$ m (neighborhood radius)
+    \item $MinPts = 5$ (minimum cluster points)
+\end{itemize}
+These values are selected empirically based on indoor LiDAR density characteristics.
+
+\sectionsection{System Model}
+The tracking system is formulated as a nonlinear discrete-time state-space model:
+\begin{equation}
+x_{k}=f(x_{k-1})+w_{k}
+\end{equation}
+\begin{equation}
+z_{k}=h(x_{k})+v_{k}
+\end{equation}
+where:
+\begin{itemize}
+    \item $w_{k}\sim\mathcal{N}(0,Q)$ is process noise,
+    \item $v_{k}\sim\mathcal{N}(0,R)$ is measurement noise,
+    \item $f(\cdot)$ is the CTRV motion model,
+    \item $h(\cdot)$ maps state to measurement space.
+\end{itemize}
+
+The process noise covariance matrix models uncertainties in target motion dynamics, while the measurement covariance matrix R represents sensor measurement uncertainties caused by LiDAR noise and environmental effects. Proper selection of these covariance matrices is critical for maintaining filter stability and estimation accuracy.
+
+The measurement model is defined as:
+\begin{equation}
+z_{k}=\begin{bmatrix} p_{x} \\ p_{y} \end{bmatrix}+v_{k}
+\end{equation}
+
+\section{LiDAR Data Processing}
+The LiDAR sensor measurements are represented in polar coordinates. The distance and angle values are converted into Cartesian coordinates using:
+\begin{equation}
+x=r \cos(\theta)
+\end{equation}
+\begin{equation}
+y=r \sin(\theta)
+\end{equation}
+where $r$ represents the measured distance and $\theta$ denotes the scan angle.
+
+Range filtering is applied to remove invalid measurements outside the operating region of the sensor. Instead of the 3D grid-based clustering technique in [1], DBSCAN is used in this study. After preprocessing, the DBSCAN clustering algorithm is used to group neighboring points. In the DBSCAN algorithm, a point is considered a core point if the number of neighboring samples within a predefined radius exceeds a minimum threshold value [2]. This property enables DBSCAN to identify dense point regions corresponding to potential targets while rejecting sparse noisy measurements.
+
+The DBSCAN algorithm was selected because it does not require a predefined number of clusters and performs well in noisy environments. Cluster candidates are filtered according to minimum and maximum target dimensions to suppress false detections.
+
+In addition to spatial clustering, several filtering stages were applied to improve measurement quality. Invalid range values and isolated noisy measurements were removed before clustering. Furthermore, geometric filtering based on target width and height constraints reduced the probability of false detections caused by walls, sensor noise, or static background structures.
+
+\section{Unscented Kalman Filter with CTRV Motion Model}
+The state vector of the tracking system is defined as:
+\begin{equation}
+x = [p_{x} \quad p_{y} \quad v \quad \psi \quad \omega]^T
+\end{equation}
+where:
+\begin{itemize}
+    \item $p_{x}, p_{y}$: target position,
+    \item $v$: linear velocity,
+    \item $\psi$: heading angle,
+    \item $\omega$: turn rate.
+\end{itemize}
+
+The CTRV motion model assumes constant velocity and constant angular velocity during the prediction interval. For nonzero angular velocity, the motion equations are expressed as:
+\begin{equation}
+p_{x}(k+1)=p_{x}(k)+\frac{v}{\omega}(\sin(\psi+\omega\Delta t)-\sin(\psi))
+\end{equation}
+\begin{equation}
+p_{y}(k+1)=p_{y}(k)+\frac{v}{\omega}(-\cos(\psi+\omega\Delta t)+\cos(\psi))
+\end{equation}
+\begin{equation}
+\psi(k+1)=\psi(k)+\omega\Delta t
+\end{equation}
+For very small angular velocities, a linear motion approximation is used.
+
+The Unscented Kalman Filter estimates the nonlinear system states using sigma points instead of linearization. This improves estimation accuracy compared to EKF-based approaches. Unlike the EKF, the UKF does not require first-order linearization using Jacobian matrices. Instead, a deterministic set of sigma points is generated around the current state estimate and propagated through the nonlinear system dynamics. This approach provides improved estimation accuracy for nonlinear tracking problems while preserving computational efficiency suitable for real-time applications.
+
+The UKF was preferred instead of the EKF because it avoids explicit Jacobian calculations and provides better numerical stability for nonlinear motion models. Sigma points are propagated through the nonlinear CTRV dynamics, allowing the filter to estimate the mean and covariance more accurately during nonlinear target motion.
+
+\subsection{UKF Algorithm Summary}
+\begin{enumerate}
+    \item Initialize $x_{0}$, $P_{0}$
+    \item Generate sigma points
+    \item Propagate through CTRV model
+    \item Compute predicted mean and covariance
+    \item Measurement prediction
+    \item Compute innovation
+    \item Update state and covariance
+\end{enumerate}
+The recursive prediction and correction structure of the UKF enables continuous real-time estimation of target motion states while adapting to incoming LiDAR measurements at each sampling interval.
+
+\section{Data Association and Track Management}
+A nearest-neighbor data association strategy is employed to match measurements with existing tracks. Euclidean distance is used as the gating metric.
+
+Tracks are initialized only after a predefined number of successful detections in order to suppress false positives. Similarly, tracks are deleted after exceeding a maximum number of missed frames.
+
+The system supports up to six simultaneous targets. Each track maintains its own covariance matrix, trajectory history, and consistency statistics. Although the nearest-neighbor association strategy provides low computational complexity and fast execution, more advanced association techniques such as Joint Probabilistic Data Association (JPDA) or the Hungarian algorithm may provide improved robustness in dense multi-target scenarios involving trajectory crossings and heavy clutter.
+
+A gating threshold is defined as:
+\begin{equation}
+d_{\text{gate}}=\sqrt{(z-\hat{z})^{T}S^{-1}(z-\hat{z})}
+\end{equation}
+A measurement is associated if:
+\begin{equation}
+d_{\text{gate}} < \gamma
+\end{equation}
+where $\gamma$ is a tunable threshold.
+
+\section{Consistency Analysis}
+Several experimental scenarios involving target crossings, temporary occlusions, and varying motion directions were considered in order to evaluate the robustness of the proposed tracking framework under realistic indoor conditions.
+
+Experimental studies were conducted using the YDLIDAR G2 sensor in an indoor environment with multiple moving targets. The proposed system successfully tracked multiple targets simultaneously in real time.
+
+The UKF-based CTRV model provided smooth trajectory estimation and stable velocity predictions. The DBSCAN clustering algorithm effectively separated nearby targets and reduced noise measurements. The UKF estimator provided smooth trajectory reconstruction even under temporary measurement losses and nonlinear target motion. The selected gating and track management strategies significantly improved tracking continuity by preventing unstable track switching and false target initialization.
+
+The NIS consistency plots indicated that the filter remained stable for most tracking scenarios. The proposed confirmation and missed-frame mechanisms significantly reduced false track generation. During the experiments, the system maintained stable tracking performance even when targets temporarily disappeared from the sensor field of view. The missed-frame handling mechanism allowed tracks to survive short-term occlusions without immediate deletion. This behavior improved tracking continuity and reduced unnecessary track initialization events.
+
+The processing pipeline successfully operated in real time on a standard computer system. The selected frame duration and clustering parameters provided a good balance between computational cost and tracking accuracy.
+
+\subsection{Quantitative Evaluation}
+The tracking performance is evaluated using:
+\begin{itemize}
+    \item Root Mean Square Error (RMSE)
+    \item Track loss ratio
+    \item Average NIS value
+    \item Processing time per frame
+\end{itemize}
+The RMSE is defined as:
+\begin{equation}
+RMSE=\sqrt{\frac{1}{N}\sum_{i=1}^{N}(x_{i}-\hat{x}_{i})^2}
+\end{equation}
+
+% Not: Fig 1 ve Fig 2 için projedeki görsel isimlerini main.tex ile aynı klasöre atıp isimlerini güncelleyebilirsin.
+\begin{figure}[htbp]
+\centering
+%\includegraphics[width=0.45\textwidth]{fig1.png} % Görselin varsa yorum satırını kaldırabilirsin
+\caption{Real-time multi-target tracking results using YDLIDAR G2 and UKF-CTRV framework.}
+\label{fig1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+%\includegraphics[width=0.45\textwidth]{fig2.png} % Görselin varsa yorum satırını kaldırabilirsin
+\caption{NIS consistency analysis results.}
+\label{fig2}
+\end{figure}
+
+\section{Discussion}
+The proposed system demonstrates strong robustness in indoor environments; however, performance degradation may occur under high target density or severe occlusion.
+
+The CTRV model assumes constant angular velocity, which limits accuracy during abrupt maneuvers. Future improvements may include Interactive Multiple Model (IMM) filtering or particle filter-based approaches. Another limitation of the current framework is the possibility of cluster merging when multiple targets move very close to each other. In such cases, the DBSCAN algorithm may produce a single merged cluster, which can temporarily reduce tracking accuracy. Adaptive clustering strategies or sensor fusion approaches may help overcome this limitation.
+
+Another possible improvement is the integration of additional sensors such as cameras or inertial measurement units (IMUs). Sensor fusion methods could increase robustness under noisy measurement conditions and improve tracking accuracy in crowded environments. In addition, adaptive parameter tuning methods may further enhance system stability under different operating scenarios.
+
+\section{Conclusion}
+This study presented a real-time multi-target tracking framework using YDLIDAR G2 measurements and an Unscented Kalman Filter with a CTRV motion model. The proposed system achieved stable nonlinear state estimation and robust target tracking performance in dynamic environments.
+
+Experimental results demonstrated that the UKF-based approach successfully handled nonlinear target motion while maintaining statistical consistency according to NIS analysis. Future work may include sensor fusion approaches using camera and IMU systems, as well as advanced data association techniques such as Joint Probabilistic Data Association (JPDA).
+
+Overall, the proposed framework demonstrates that LiDAR-based multi-target tracking using UKF and CTRV motion modeling can provide reliable real-time performance for indoor robotic perception systems. The implemented framework offers a flexible structure that can be extended for more advanced autonomous navigation and surveillance applications.
+
+\section*{ACKNOWLEDGMENT}
+The authors would like to thank the course instructor and the laboratory facilities of Marmara University for supporting this project.
+
+During the preparation of this manuscript, the authors acknowledge the use of Gemini (by Google) to assist in generating and refining the Python and MATLAB scripts used for the experimental evaluation, data processing, and Kalman filter implementations. Additionally, ChatGPT (by OpenAI) was utilized solely for editing, grammatical enhancement, and improving the overall readability of the text. Following the use of these tools, the authors thoroughly reviewed, verified, and tested all generated material and code, and assume full responsibility for the final content of this publication.
+
+\begin{thebibliography}{00}
+\bibitem{b1} M. Sualeh and G.-W. Kim, ``Dynamic multi-lidar based multiple object detection and tracking,'' \textit{Sensors}, vol. 19, no. 6, 2019. [Online]. Available: https://www.mdpi.com/1424-8220/19/6/1474
+\bibitem{b2} D. Deng, ``Dbscan clustering algorithm based on density,'' in \textit{2020 7th International Forum on Electrical Engineering and Automation (IFEEA)}, 2020, pp. 949-953.
+\end{thebibliography}
+
+\end{document}
